@@ -1527,73 +1527,233 @@ async function uploadFiles(files, gridId) {
 }
 
 // ===== ANALYTICS =====
-function renderAnalytics(el) {
-  const sorted = [...allArticles].sort((a,b) => (b.views||0)-(a.views||0));
-  const maxViews = sorted[0]?.views || 1;
-  
+// ===== ANALYTICS — Data realtime dari Supabase =====
+let liveStats = []; // cache dari article_stats
+
+async function loadLiveStats() {
+  const { data } = await sb.from('article_stats').select('*');
+  liveStats = data || [];
+}
+
+async function renderAnalytics(el) {
+  el.innerHTML = `<div class="page-loader"><div class="spinner"></div> Memuat data analytics...</div>`;
+  await Promise.all([loadLiveStats(), loadComments()]);
+
+  // ── Agregat dari article_stats (Supabase) ──
+  const totalViews = liveStats.reduce((s,r)=>s+Number(r.views||0),0);
+  const totalLikes = liveStats.reduce((s,r)=>s+Number(r.likes||0),0);
+  const totalSaves = liveStats.reduce((s,r)=>s+Number(r.saves||0),0);
+
+  // Estimasi pengunjung unik dari article_interactions
+  const { count: uniqueVisitors } = await sb
+    .from('article_interactions')
+    .select('user_id', { count: 'exact', head: true });
+
+  // Publish rate dari admin_articles
+  const totalAdmin     = allArticles.length;
+  const publishedAdmin = allArticles.filter(a=>a.status==='published').length;
+  // Artikel Denscope dianggap semua published
+  const DENSCOPE_COUNT = 56;
+  const totalAll       = DENSCOPE_COUNT + totalAdmin;
+  const totalPublished = DENSCOPE_COUNT + publishedAdmin;
+  const publishRate    = totalAll ? Math.round((totalPublished/totalAll)*100) : 100;
+
+  // ── Top 10: merge stats Supabase dengan data artikel ──
+  // Buat map article_id → stats
+  const statsMap = {};
+  liveStats.forEach(r => { statsMap[r.article_id] = r; });
+
+  // Data artikel Denscope (dari articles.js lewat hardcode ringkas)
+  const DENSCOPE_ARTICLES_BASIC = [
+    {id:1,title:"Strategi Digital Marketing 2026",category:"teknologi"},{id:2,title:"Dia yang Selalu Ada di Ujung Malam",category:"novel"},
+    {id:3,title:"5 Tren AI yang Akan Mendominasi 2026",category:"teknologi"},{id:4,title:"Resep Rahasia Mie Ayam Bakso Spesial",category:"lifestyle"},
+    {id:5,title:"Review Honda CBR 250RR 2026",category:"otomotif"},{id:6,title:"Investasi Saham untuk Pemula 2026",category:"bisnis"},
+    {id:7,title:"5 Drama Korea Terbaik yang Wajib Ditonton",category:"film"},{id:8,title:"Tips Hidup Sehat di Era Digital",category:"health"},
+    {id:9,title:"Gempa Bumi 6,2 SR Guncang Sulawesi Tengah",category:"nasional"},{id:10,title:"SpaceX Berhasil Mendarat di Mars",category:"internasional"},
+    {id:11,title:"Manfaat Meditasi Harian",category:"health"},{id:12,title:"Cryptocurrency 2026: Masih Layak Investasi?",category:"bisnis"},
+    {id:13,title:"Review Film Interstellar 2",category:"film"},{id:14,title:"Cara Memulai Bisnis Online dari Nol",category:"bisnis"},
+    {id:15,title:"Satu Atap, Seribu Masalah",category:"novel"},{id:16,title:"Toyota Fortuner 2026",category:"otomotif"},
+    {id:17,title:"Pemerintah Luncurkan Program Beasiswa",category:"nasional"},{id:18,title:"Kesepakatan Damai Bersejarah di Timur Tengah",category:"internasional"},
+    {id:19,title:"Istri Kontrak Tuan Muda Dingin",category:"novel"},{id:20,title:"WHO Deklarasikan Wabah Virus Baru",category:"internasional"},
+    {id:21,title:"OpenAI Luncurkan GPT-6",category:"teknologi"},{id:22,title:"5 Destinasi Wisata Tersembunyi di Bali",category:"lifestyle"},
+    {id:23,title:"Cara Membuat Website dengan React",category:"teknologi"},{id:24,title:"Review Xiaomi 15 Pro",category:"teknologi"},
+    {id:25,title:"Passive Income 2026: 7 Cara Menghasilkan Uang",category:"bisnis"},{id:26,title:"Rahasia Kulit Glowing",category:"health"},
+    {id:27,title:"Mahkamah Agung Tetapkan Putusan Bersejarah",category:"nasional"},{id:28,title:"PBB Sahkan Perjanjian Global Regulasi AI",category:"internasional"},
+    {id:29,title:"Kenangan di Ujung Rel",category:"novel"},{id:30,title:"Review Yamaha R15 V5 2026",category:"otomotif"},
+    {id:31,title:"Cara Investasi Reksa Dana untuk Mahasiswa",category:"bisnis"},{id:32,title:"Review Film Avengers: Secret Wars",category:"film"},
+    {id:33,title:"Tips Diet Sehat Tanpa Tersiksa",category:"health"},{id:34,title:"Banjir Bandang Landa Kalimantan Selatan",category:"nasional"},
+    {id:35,title:"Tiongkok Luncurkan Stasiun Luar Angkasa",category:"internasional"},{id:36,title:"Tutorial Flutter",category:"teknologi"},
+    {id:37,title:"10 Buku Self-Improvement Terbaik 2026",category:"lifestyle"},{id:38,title:"Review Film Dune: Part Three",category:"film"},
+    {id:39,title:"Skandal Korupsi Proyek Infrastruktur",category:"nasional"},{id:40,title:"Uni Eropa Regulasi Big Tech",category:"internasional"},
+    {id:41,title:"Cinta di Balik Layar",category:"novel"},{id:42,title:"Pemerintah Naikkan Gaji Minimum 15%",category:"nasional"},
+    {id:43,title:"Konflik Bersenjata di Asia Tengah",category:"internasional"},{id:44,title:"Review Film Batman: Dark Knight Returns",category:"film"},
+    {id:45,title:"Rahasia Sukses Pengusaha Muda Indonesia",category:"bisnis"},{id:46,title:"Nostalgia di Kota Tua",category:"novel"},
+    {id:47,title:"Polisi Gerebek Sindikat Narkoba",category:"nasional"},{id:48,title:"Krisis Pangan Global",category:"internasional"},
+    {id:49,title:"Review Film Interstellar 2 (extended)",category:"film"},{id:50,title:"Sang Penjaga Janji",category:"novel"},
+    {id:51,title:"Pemilu 2026: Dinamika Politik",category:"nasional"},{id:52,title:"NATO Perkuat Pertahanan di Eropa Timur",category:"internasional"},
+    {id:53,title:"Review Suzuki GSX-R150 2026",category:"otomotif"},{id:54,title:"Dua Hati di Persimpangan",category:"novel"},
+    {id:55,title:"Gempa 7,1 SR Guncang Papua",category:"nasional"},{id:56,title:"Review Film Gladiator III",category:"film"},
+  ];
+
+  const allMerged = [
+    ...DENSCOPE_ARTICLES_BASIC.map(a => ({
+      ...a,
+      views: Number(statsMap[a.id]?.views||0),
+      likes: Number(statsMap[a.id]?.likes||0),
+      saves: Number(statsMap[a.id]?.saves||0),
+      source: 'denscope'
+    })),
+    ...allArticles.map(a => ({
+      title: a.title||'Tanpa judul', category: a.category||'—',
+      views: Number(statsMap[a.id]?.views||0),
+      likes: Number(statsMap[a.id]?.likes||0),
+      saves: Number(statsMap[a.id]?.saves||0),
+      source: 'admin'
+    }))
+  ].sort((a,b)=>b.views-a.views);
+
+  const top10 = allMerged.slice(0,10);
+  const maxViews = top10[0]?.views || 1;
+
+  // ── Kategori ──
+  const catCount = {}, catViews = {}, catLikes = {};
+  allMerged.forEach(a => {
+    const c = a.category||'lainnya';
+    catCount[c] = (catCount[c]||0)+1;
+    catViews[c] = (catViews[c]||0)+a.views;
+    catLikes[c] = (catLikes[c]||0)+a.likes;
+  });
+  const maxCatViews = Math.max(...Object.values(catViews), 1);
+
   el.innerHTML = `
-  <div class="stats-grid">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px 18px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:12px;font-size:13px;color:#86efac;">
+    <i class="fas fa-satellite-dish"></i>
+    <span><strong>Data realtime dari Supabase</strong> — views, likes, dan simpan dihitung dari setiap visitor nyata</span>
+    <span style="margin-left:auto;color:var(--text3)">${liveStats.length} artikel terekam</span>
+  </div>
+
+  <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
     <div class="stat-card purple">
       <div class="stat-icon purple"><i class="fas fa-eye"></i></div>
-      <div class="stat-value">${fmtNum(allArticles.reduce((s,a)=>s+(a.views||0),0))}</div>
+      <div class="stat-value">${fmtNum(totalViews)}</div>
       <div class="stat-label">Total Views</div>
+      <div class="stat-change up">Dari visitor nyata</div>
     </div>
     <div class="stat-card blue">
-      <div class="stat-icon blue"><i class="fas fa-heart"></i></div>
-      <div class="stat-value">${fmtNum(allArticles.reduce((s,a)=>s+(a.likes||0),0))}</div>
-      <div class="stat-label">Total Likes</div>
+      <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+      <div class="stat-value">${fmtNum(uniqueVisitors||0)}</div>
+      <div class="stat-label">Pengunjung Unik</div>
+      <div class="stat-change" style="color:var(--text3)">Anonymous ID unik</div>
     </div>
     <div class="stat-card green">
-      <div class="stat-icon green"><i class="fas fa-comments"></i></div>
-      <div class="stat-value">${allComments.length}</div>
-      <div class="stat-label">Total Komentar</div>
+      <div class="stat-icon green"><i class="fas fa-heart"></i></div>
+      <div class="stat-value">${fmtNum(totalLikes)}</div>
+      <div class="stat-label">Total Likes</div>
+      <div class="stat-change up">Dari visitor nyata</div>
     </div>
     <div class="stat-card orange">
-      <div class="stat-icon orange"><i class="fas fa-percentage"></i></div>
-      <div class="stat-value">${allArticles.length ? Math.round((allArticles.filter(a=>a.status==='published').length/allArticles.length)*100) : 0}%</div>
+      <div class="stat-icon orange"><i class="fas fa-bookmark"></i></div>
+      <div class="stat-value">${fmtNum(totalSaves)}</div>
+      <div class="stat-label">Total Disimpan</div>
+      <div class="stat-change up">Dari visitor nyata</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon green"><i class="fas fa-percentage"></i></div>
+      <div class="stat-value">${publishRate}%</div>
       <div class="stat-label">Publish Rate</div>
+      <div class="stat-change up">${totalPublished}/${totalAll} artikel</div>
     </div>
   </div>
+
   <div class="grid-2">
     <div class="panel">
-      <div class="panel-head"><div class="panel-title"><i class="fas fa-trophy" style="color:var(--yellow)"></i> Top 10 Artikel Terbanyak Dibaca</div></div>
+      <div class="panel-head">
+        <div class="panel-title"><i class="fas fa-trophy" style="color:var(--yellow)"></i> Top 10 Artikel Terbanyak Dibaca</div>
+        <span style="font-size:11px;color:var(--text3)">Data realtime</span>
+      </div>
       <div class="panel-body" style="padding:0 24px;">
-        <ul class="top-articles">
-          ${sorted.slice(0,10).map((a,i) => `
-          <li class="top-article-item">
-            <div class="top-num ${i<3?"first":""}">${i+1}</div>
-            <div class="top-article-info">
-              <div class="t-title">${a.title||'Tanpa judul'}</div>
-              <div class="t-views"><i class="fas fa-eye"></i> ${fmtNum(a.views||0)} | <i class="fas fa-heart"></i> ${fmtNum(a.likes||0)}</div>
-              <div class="top-bar"><div class="top-bar-fill" style="width:${Math.min(100,((a.views||0)/maxViews)*100)}%"></div></div>
-            </div>
-          </li>`).join('')}
-        </ul>
+        ${top10.length === 0
+          ? `<div class="empty-state"><i class="fas fa-eye-slash"></i><p>Belum ada artikel yang dibaca visitor</p></div>`
+          : `<ul class="top-articles">
+            ${top10.map((a,i)=>`
+            <li class="top-article-item">
+              <div class="top-num ${i<3?"first":""}"><span>${i+1}</span></div>
+              <div class="top-article-info">
+                <div class="t-title">${a.title}${a.source==='admin'?' <span style="font-size:9px;background:rgba(108,99,255,0.2);color:var(--accent2);padding:1px 5px;border-radius:4px;">ADMIN</span>':''}</div>
+                <div class="t-views">
+                  <i class="fas fa-eye"></i> ${fmtNum(a.views)}
+                  &nbsp;&middot;&nbsp;<i class="fas fa-heart"></i> ${fmtNum(a.likes)}
+                  &nbsp;&middot;&nbsp;<i class="fas fa-bookmark"></i> ${fmtNum(a.saves)}
+                  &nbsp;&middot;&nbsp;<span class="badge cat" style="font-size:10px;padding:1px 6px;">${a.category}</span>
+                </div>
+                <div class="top-bar"><div class="top-bar-fill" style="width:${maxViews>0?Math.min(100,(a.views/maxViews)*100):0}%"></div></div>
+              </div>
+            </li>`).join('')}
+          </ul>`
+        }
       </div>
     </div>
-    <div class="panel">
-      <div class="panel-head"><div class="panel-title"><i class="fas fa-chart-pie" style="color:var(--accent2)"></i> Artikel per Kategori</div></div>
-      <div class="panel-body"><div class="chart-wrap"><canvas id="chartCat"></canvas></div></div>
+
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title"><i class="fas fa-chart-pie" style="color:var(--accent2)"></i> Artikel per Kategori</div></div>
+        <div class="panel-body"><div class="chart-wrap"><canvas id="chartCat"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title"><i class="fas fa-chart-bar" style="color:var(--accent3)"></i> Views per Kategori</div></div>
+        <div class="panel-body" style="padding:16px 20px;">
+          ${Object.entries(catViews).sort((a,b)=>b[1]-a[1]).map(([cat,views])=>`
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:12px;font-weight:600;text-transform:capitalize;">${cat}</span>
+              <span style="font-size:12px;color:var(--text3)">${fmtNum(views)}</span>
+            </div>
+            <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${Math.min(100,(views/maxCatViews)*100)}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;"></div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-head"><div class="panel-title"><i class="fas fa-chart-line" style="color:var(--green)"></i> Views vs Likes vs Simpan per Kategori</div></div>
+    <div class="panel-body"><div class="chart-wrap" style="height:300px;"><canvas id="chartEngagement"></canvas></div></div>
   </div>`;
-  
+
   setTimeout(() => {
-    const catData = {};
-    allArticles.forEach(a => { catData[a.category||'Lainnya'] = (catData[a.category||'Lainnya']||0)+1; });
-    const ctx = document.getElementById('chartCat');
-    if (!ctx) return;
-    new Chart(ctx, {
+    const cats = Object.keys(catCount);
+    const ctx1 = document.getElementById('chartCat');
+    if (ctx1) new Chart(ctx1, {
       type: 'doughnut',
       data: {
-        labels: Object.keys(catData),
-        datasets: [{ data: Object.values(catData),
-          backgroundColor: ['#6c63ff','#38bdf8','#22c55e','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#60a5fa'],
-          borderWidth: 0 }]
+        labels: cats.map(k=>k.charAt(0).toUpperCase()+k.slice(1)),
+        datasets: [{ data: cats.map(c=>catCount[c]),
+          backgroundColor:['#6c63ff','#38bdf8','#22c55e','#f59e0b','#ef4444','#a78bfa','#34d399','#fb923c','#60a5fa'],
+          borderWidth:0 }]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { color: '#a0a0c0', padding: 12, font: { size: 12 } } } }
-      }
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{color:'#a0a0c0',padding:10,font:{size:11}}}}}
+    });
+
+    const ctx2 = document.getElementById('chartEngagement');
+    if (ctx2) new Chart(ctx2, {
+      type:'bar',
+      data:{
+        labels: cats.map(k=>k.charAt(0).toUpperCase()+k.slice(1)),
+        datasets:[
+          {label:'Views', data:cats.map(c=>catViews[c]||0), backgroundColor:'rgba(108,99,255,0.7)', borderRadius:6},
+          {label:'Likes', data:cats.map(c=>catLikes[c]||0), backgroundColor:'rgba(56,189,248,0.7)', borderRadius:6},
+          {label:'Simpan', data:cats.map(c=>allMerged.filter(a=>a.category===c).reduce((s,a)=>s+a.saves,0)), backgroundColor:'rgba(34,197,94,0.7)', borderRadius:6},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#a0a0c0',font:{size:11}}}},
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#a0a0c0',font:{size:11}}},
+          y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#a0a0c0',callback:v=>fmtNum(v)}}
+        }}
     });
   }, 100);
 }
