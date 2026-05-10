@@ -1,4 +1,12 @@
 -- =============================================
+-- MIGRASI (jika tabel admin_users sudah ada)
+-- Jalankan perintah berikut di Supabase SQL Editor
+-- untuk mengizinkan role 'user' dari Denscope Register:
+-- =============================================
+ALTER TABLE admin_users DROP CONSTRAINT IF EXISTS admin_users_role_check;
+ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_check 
+  CHECK (role IN ('admin','author','user'));
+-- =============================================
 -- DENSCOPE ADMIN - Database Setup
 -- Jalankan di Supabase SQL Editor
 -- =============================================
@@ -44,17 +52,21 @@ create table if not exists admin_tags (
   created_at timestamptz default now()
 );
 
--- 4. ADMIN USERS (authors)
+-- 4. ADMIN USERS (authors + registered users)
 create table if not exists admin_users (
   id uuid default gen_random_uuid() primary key,
   name text not null,
   email text not null unique,
   password text,
-  role text default 'author' check (role in ('admin','author')),
+  role text default 'author' check (role in ('admin','author','user')),
   avatar text,
   bio text,
   created_at timestamptz default now()
 );
+
+-- Jika tabel sudah ada, jalankan ALTER ini untuk menambah 'user' ke constraint:
+-- ALTER TABLE admin_users DROP CONSTRAINT IF EXISTS admin_users_role_check;
+-- ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_check CHECK (role IN ('admin','author','user'));
 
 -- 5. MEDIA
 create table if not exists admin_media (
