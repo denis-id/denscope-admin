@@ -184,7 +184,9 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:rgba(108,99,255,0.04
 .user-count-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(34,197,94,0.1);color:#86efac;border:1px solid rgba(34,197,94,0.2);}
 @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr);}.grid-2,.grid-3{grid-template-columns:1fr;}}
 @media(max-width:768px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}.main{margin-left:0;}.content{padding:20px;}.stats-grid{grid-template-columns:1fr 1fr;}.form-grid{grid-template-columns:1fr;}.topbar{padding:0 20px;}.topbar-search{display:none;}}
-@keyframes notifIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes toastIn{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes alertPop{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 </head>
 <body>
@@ -424,50 +426,29 @@ function doLogin() {
   const loginBtn = btn.parentElement;
 
   err.style.display = 'none';
-  if (!email || !pass) {
-    err.textContent = 'Email dan password wajib diisi.';
-    err.style.display = 'block'; return;
-  }
+  if (!email || !pass) { err.textContent='Email dan password wajib diisi.'; err.style.display='block'; return; }
 
-  btn.textContent = 'Masuk...';
-  loginBtn.disabled = true;
+  btn.textContent = 'Masuk...'; loginBtn.disabled = true;
 
   function loginFail(msg) {
-    err.textContent = msg;
-    err.style.display = 'block';
-    btn.textContent = 'Masuk ke Dashboard';
-    loginBtn.disabled = false;
+    err.textContent = msg; err.style.display = 'block';
+    btn.textContent = 'Masuk ke Dashboard'; loginBtn.disabled = false;
   }
 
-  // 1. Cek hardcoded admin dulu (tidak perlu Supabase)
   const hardUser = ADMIN_USERS.find(u => u.email === email && u.password === pass);
-  if (hardUser) {
-    currentUser = hardUser;
-    localStorage.setItem('adminUser', JSON.stringify(hardUser));
-    showApp(); return;
-  }
+  if (hardUser) { currentUser=hardUser; localStorage.setItem('adminUser',JSON.stringify(hardUser)); showApp(); return; }
 
-  // 2. Cek ke Supabase dengan timeout 8 detik
   let done = false;
-  const timer = setTimeout(() => {
-    if (!done) { done = true; loginFail('Koneksi lambat atau server tidak merespons. Coba lagi.'); }
-  }, 8000);
+  const timer = setTimeout(() => { if(!done){done=true;loginFail('Koneksi lambat, coba lagi.');} }, 8000);
 
-  sb.from('admin_users').select('*').eq('email', email).eq('password', pass).single()
-    .then(({ data, error }) => {
-      if (done) return;
-      done = true; clearTimeout(timer);
-      if (!data || error) { loginFail('Email atau password salah.'); return; }
-      if (data.role === 'user') { loginFail('Akun ini tidak punya akses ke dashboard.'); return; }
-      currentUser = data;
-      localStorage.setItem('adminUser', JSON.stringify(data));
-      showApp();
+  sb.from('admin_users').select('*').eq('email',email).eq('password',pass).single()
+    .then(({data,error}) => {
+      if(done)return; done=true; clearTimeout(timer);
+      if(!data||error){ loginFail('Email atau password salah.'); return; }
+      if(data.role==='user'){ loginFail('Akun ini tidak punya akses ke dashboard.'); return; }
+      currentUser=data; localStorage.setItem('adminUser',JSON.stringify(data)); showApp();
     })
-    .catch(e => {
-      if (done) return;
-      done = true; clearTimeout(timer);
-      loginFail('Gagal terhubung: ' + (e.message || 'unknown error'));
-    });
+    .catch(e => { if(done)return; done=true; clearTimeout(timer); loginFail('Gagal terhubung: '+(e.message||'error')); });
 }
 
 function doLogout() {
@@ -494,17 +475,15 @@ function showApp() {
 document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 window.addEventListener('load', () => {
-  try {
-    const s = localStorage.getItem('adminUser');
-    if (s) { currentUser = JSON.parse(s); showApp(); }
-  } catch(e) { localStorage.removeItem('adminUser'); }
+  try { const s=localStorage.getItem('adminUser'); if(s){currentUser=JSON.parse(s);showApp();} }
+  catch(e){ localStorage.removeItem('adminUser'); }
 });
 
 // ── LOAD DATA ──
 async function loadAllData() {
   try {
     await Promise.all([loadArticles(),loadCategories(),loadTags(),loadAuthors(),loadUsers(),loadComments(),loadMedia()]);
-  } catch(e) { console.warn('loadAllData error:', e); }
+  } catch(e) { console.warn('loadAllData:', e); }
   updateCounts();
 }
 async function loadArticles(){const{data}=await sb.from('admin_articles').select('*').order('created_at',{ascending:false});allArticles=data||[];}
@@ -726,11 +705,29 @@ async function deleteTag(id){const{error}=await sb.from('admin_tags').delete().e
 
 // ── USERS (Pengguna register) ──
 function renderUsers(el) {
+  const newestUser = allUsers[0];
+  const newestAlert = newestUser ? `
+  <div id="newUserAlert" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px 18px;background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.35);border-radius:14px;animation:alertPop .4s ease;">
+    <img src="${newestUser.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(newestUser.name||'U')+'&background=22c55e&color=fff&size=80'}"
+      style="width:46px;height:46px;border-radius:50%;border:2px solid rgba(34,197,94,0.5);flex-shrink:0;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#86efac;font-weight:700;margin-bottom:3px;">
+        <i class="fas fa-circle" style="font-size:7px;margin-right:5px;animation:pulse 1.5s infinite;"></i>Pendaftar Terbaru
+      </div>
+      <div style="font-weight:700;font-size:14px;color:#f0f0ff;">${newestUser.name}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px;">${newestUser.email} &nbsp;·&nbsp; ${fmtDate(newestUser.created_at)}</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-size:11px;color:#86efac;margin-bottom:4px;">Total pendaftar</div>
+      <div style="font-size:22px;font-weight:800;color:#22c55e;">${allUsers.length}</div>
+    </div>
+  </div>` : '';
+
   el.innerHTML=`
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:12px;font-size:13px;color:#86efac;">
+  ${newestAlert}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:11px 15px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.18);border-radius:12px;font-size:13px;color:#86efac;">
     <i class="fas fa-user-plus"></i>
     <span>Pengguna yang mendaftar melalui halaman Register Denscope</span>
-    <span class="user-count-badge" style="margin-left:auto;">${allUsers.length} pengguna</span>
   </div>
   <div class="filter-bar">
     <input class="filter-input" id="userSearch" placeholder="🔍 Cari nama atau email..." oninput="filterUsers()" style="flex:1;max-width:320px;">
@@ -740,18 +737,50 @@ function renderUsers(el) {
 
 function renderUserRows(users) {
   if(!users.length) return`<div class="empty-state"><i class="fas fa-users"></i><p>Belum ada pengguna yang mendaftar</p></div>`;
-  return`<table><thead><tr><th>Avatar</th><th>Nama</th><th>Email</th><th>Role</th><th>Bergabung</th><th>Aksi</th></tr></thead><tbody>
-  ${users.map(u=>`<tr>
+  return`<table><thead><tr>
+    <th>Avatar</th><th>Nama</th><th>Email</th><th>Password</th><th>Role</th><th>Bergabung</th><th>Aksi</th>
+  </tr></thead><tbody>
+  ${users.map(u=>{
+    const pw = u.password||'-';
+    const masked = pw==='- ' ? '-' : '•'.repeat(Math.min(pw.length,10));
+    const uid = u.id;
+    return `<tr>
     <td><img style="width:38px;height:38px;border-radius:50%;object-fit:cover;" src="${u.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.name)+'&background=0f2b3d&color=fff'}"></td>
     <td><strong>${u.name}</strong></td>
     <td style="color:var(--text2)">${u.email}</td>
+    <td>
+      <span style="display:flex;align-items:center;gap:6px;">
+        <code id="pw_${uid}" style="font-size:12px;background:var(--bg3);padding:3px 7px;border-radius:6px;letter-spacing:1px;">${masked}</code>
+        <button onclick="togglePw('${uid}','${pw}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;" title="Tampilkan/Sembunyikan">
+          <i id="pwico_${uid}" class="fas fa-eye"></i>
+        </button>
+      </span>
+    </td>
     <td>${roleBadge(u.role)}</td>
     <td style="color:var(--text3)">${fmtDate(u.created_at)}</td>
     <td><div style="display:flex;gap:6px;">
-      <button class="btn btn-warning btn-sm" title="Jadikan Author" onclick="promoteUser('${u.id}','author')"><i class="fas fa-user-edit"></i> Author</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDelete('pengguna','${u.id}','admin_users')"><i class="fas fa-trash"></i></button>
+      <button class="btn btn-warning btn-sm" title="Jadikan Author" onclick="promoteUser('${uid}','author')"><i class="fas fa-user-edit"></i> Author</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('pengguna','${uid}','admin_users')"><i class="fas fa-trash"></i></button>
     </div></td>
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`;}).join('')}</tbody></table>`;
+}
+
+// Toggle tampil/sembunyikan password di tabel
+const _pwVisible = {};
+function togglePw(uid, pw) {
+  _pwVisible[uid] = !_pwVisible[uid];
+  const el  = document.getElementById('pw_' + uid);
+  const ico = document.getElementById('pwico_' + uid);
+  if (!el) return;
+  if (_pwVisible[uid]) {
+    el.textContent = pw;
+    el.style.color = '#86efac';
+    if (ico) ico.className = 'fas fa-eye-slash';
+  } else {
+    el.textContent = '•'.repeat(Math.min(pw.length, 10));
+    el.style.color = '';
+    if (ico) ico.className = 'fas fa-eye';
+  }
 }
 
 function filterUsers() {
@@ -959,17 +988,18 @@ function fmtDate(s){if(!s)return'—';return new Date(s).toLocaleDateString('id-
 function statusBadge(s){const map={published:'published',draft:'draft',scheduled:'scheduled'};const label={published:'✓ Published',draft:'○ Draft',scheduled:'⏰ Scheduled'};return`<span class="badge ${map[s]||'draft'}">${label[s]||s||'Draft'}</span>`;}
 
 
-// ── REALTIME: cek user baru dari Denscope Register ──
+// ── REALTIME: cek user baru dari Denscope Register tiap 30 detik ──
 let _lastUserCount = 0;
 
 async function pollNewUsers() {
   try {
     const { data } = await sb.from('admin_users')
-      .select('id,name,avatar,created_at').eq('role','user')
-      .order('created_at', { ascending: false });
+      .select('id,name,email,avatar,created_at').eq('role','user')
+      .order('created_at',{ascending:false});
     const fresh = data || [];
     if (_lastUserCount > 0 && fresh.length > _lastUserCount) {
-      showNewUserNotif(fresh[0], fresh.length - _lastUserCount);
+      const added = fresh.length - _lastUserCount;
+      showNewUserToast(fresh[0], added);
       await loadUsers(); updateCounts();
       if (currentPage === 'users') renderUsers(document.getElementById('pageContent'));
     }
@@ -977,45 +1007,33 @@ async function pollNewUsers() {
   } catch(e) {}
 }
 
-function dismissNewUserNotif() {
-  const el = document.getElementById('newUserNotif');
-  if (el) el.remove();
-}
+function dismissNewUserToast() { const el=document.getElementById('newUserToast'); if(el)el.remove(); }
+function goToUsersPage()       { dismissNewUserToast(); navigate('users'); }
 
-function goToUsers() { dismissNewUserNotif(); navigate('users'); }
-
-function showNewUserNotif(user, count) {
-  dismissNewUserNotif();
+function showNewUserToast(user, count) {
+  dismissNewUserToast();
   const el = document.createElement('div');
-  el.id = 'newUserNotif';
-  const av = user.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name || 'U') + '&background=22c55e&color=fff&size=64');
-  const extra = count > 1 ? ('<div style="font-size:11px;color:#a0a0c0;">+' + (count - 1) + ' lainnya</div>') : '';
+  el.id = 'newUserToast';
+  const av = user.avatar || ('https://ui-avatars.com/api/?name='+encodeURIComponent(user.name||'U')+'&background=22c55e&color=fff&size=80');
+  const extra = count > 1 ? ('<div style="font-size:11px;color:#a0a0c0;margin-top:2px;">+' + (count-1) + ' pengguna lainnya</div>') : '';
   el.innerHTML =
     '<div style="display:flex;align-items:center;gap:12px;">' +
-      '<img src="' + av + '" style="width:42px;height:42px;border-radius:50%;border:2px solid #22c55e;flex-shrink:0;">' +
+      '<img src="' + av + '" style="width:44px;height:44px;border-radius:50%;border:2px solid #22c55e;flex-shrink:0;">' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;font-size:13px;color:#f0f0ff;">Pendaftar baru!</div>' +
-        '<div style="font-size:12px;color:#86efac;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + user.name + '</div>' +
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#86efac;font-weight:700;">Pendaftar Baru!</div>' +
+        '<div style="font-weight:700;font-size:13px;color:#f0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + user.name + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + user.email + '</div>' +
         extra +
       '</div>' +
-      '<button onclick="goToUsers()" style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;">Lihat</button>' +
-      '<button onclick="dismissNewUserNotif()" style="background:none;border:none;color:#606080;cursor:pointer;font-size:20px;line-height:1;padding:0 4px;">&times;</button>' +
+      '<button onclick="goToUsersPage()" style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;white-space:nowrap;">Lihat</button>' +
+      '<button onclick="dismissNewUserToast()" style="background:none;border:none;color:#606080;cursor:pointer;font-size:20px;line-height:1;padding:0 4px;">&times;</button>' +
     '</div>';
-  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;animation:notifIn .3s ease;';
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1.5px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;width:310px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;animation:toastIn .35s ease;';
   document.body.appendChild(el);
-  setTimeout(function () {
-    if (el.parentNode) {
-      el.style.transition = 'opacity .4s';
-      el.style.opacity = '0';
-      setTimeout(function () { if (el.parentNode) el.remove(); }, 400);
-    }
-  }, 8000);
+  setTimeout(function(){if(el.parentNode){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.remove();},400);}},9000);
 }
 
-function startUserPolling() {
-  _lastUserCount = allUsers.length;
-  setInterval(pollNewUsers, 30000);
-}
+function startUserPolling() { _lastUserCount = allUsers.length; setInterval(pollNewUsers, 30000); }
 </script>
 </body>
 </html>
