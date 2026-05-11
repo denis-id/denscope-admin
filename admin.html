@@ -411,6 +411,69 @@ const sb = createClient(
 let currentUser=null,currentPage='dashboard',editingArticleId=null,editingCatId=null,editingAuthorId=null;
 let currentTags=[],mediaPickerTarget=null,selectedMedia=null;
 let allMedia=[],allArticles=[],allCategories=[],allTags=[],allAuthors=[],allUsers=[],allComments=[],scheduledTimers=[];
+let liveStats=[];
+
+const DENSCOPE_TAG_COUNT={"2026":12,"novel":11,"nasional":10,"internasional":10,"romance":8,"teknologi":8,"AI":6,"film":6,"rekomendasi":6,"kesehatan":4,"action":4,"bisnis":3,"lifestyle":3,"investasi":3,"wellness":3,"otomotif":3,"lingkungan":3,"digital marketing":2,"slice of life":2,"startup":2,"mental health":2,"revolusi":2,"review":2,"infrastruktur":2,"pertumbuhan":2,"pendidikan":2,"sains":2,"luar angkasa":2,"Eropa":2,"CEO":2,"horror":2,"thriller":2,"sci-fi":2,"fantasy":2,"supernatural":2,"SEO":1,"sweet":1,"high school":1,"artificial intelligence":1,"digital":1,"entrepreneur":1,"minimalis":1,"industri":1,"manusia":1,"crypto":1,"bitcoin":1,"blockchain":1,"remote work":1,"WFH":1,"future work":1,"meditasi":1,"mobil listrik":1,"EV":1,"kendaraan listrik":1,"motor sport":1,"sepeda motor":1,"energi terbarukan":1,"Bali":1,"IKN":1,"Nusantara":1,"pembangunan":1,"BPJS":1,"layanan publik":1,"ekonomi":1,"BPS":1,"beasiswa":1,"mahasiswa":1,"tol":1,"Sumatera":1,"transportasi":1,"unicorn":1,"agritech":1,"kurikulum":1,"coding":1,"riset":1,"CERN":1,"fisika":1,"gempa":1,"Sulawesi":1,"bencana":1,"BMKG":1,"OpenAI":1,"GPT-6":1,"PBB":1,"regulasi AI":1,"kebijakan global":1,"Tiongkok":1,"CNSA":1,"WHO":1,"kesehatan global":1,"wabah":1,"Afrika":1,"perdagangan":1,"AS":1,"tarif":1,"Jepang":1,"pemilu":1,"politik":1,"demokrasi":1,"air":1,"krisis":1,"iklim":1,"SpaceX":1,"Mars":1,"ekonomi global":1,"IMF":1,"Timur Tengah":1,"diplomasi":1,"perdamaian":1,"geopolitik":1,"diet":1,"gizi":1,"pola makan":1,"passive income":1,"keuangan":1,"travel":1,"backpacker":1,"solo travel":1,"quantum computing":1,"masa depan":1,"bisnis online":1,"UMKM":1,"media sosial":1,"olahraga":1,"kardiovaskular":1,"fitness":1,"energi surya":1,"rumah":1,"psikologi":1,"kebiasaan":1,"self-improvement":1,"neurosains":1,"enemies to lovers":1,"strong female lead":1,"SUV":1,"Indonesia":1,"bioskop":1,"Asia":1,"drama":1,"cinta":1,"science fiction":1,"futurisme":1,"animasi":1,"Ghibli":1,"Pixar":1,"anime":1,"dokumenter":1,"Netflix":1,"sinema":1,"texting":1,"strangers to lovers":1,"office":1,"dark fantasy":1,"contract marriage":1,"slow burn":1,"misteri":1,"friends to lovers":1,"healing":1,"dewasa muda":1,"dystopia":1,"post-apocalyptic":1,"comedy":1,"forced proximity":1,"high fantasy":1,"strangers":1,"one-shot":1,"airport":1};
+
+// Artikel statis Denscope (56 artikel) — dipakai di dashboard & analytics
+const DENSCOPE_STATIC=[
+  {id:1,title:"Strategi Digital Marketing 2026",category:"teknologi"},
+  {id:2,title:"Dia yang Selalu Ada di Ujung Malam",category:"novel"},
+  {id:3,title:"5 Tren AI yang Akan Mendominasi 2026",category:"teknologi"},
+  {id:4,title:"Tips Sukses Berbisnis di Era Digital",category:"bisnis"},
+  {id:5,title:"Minimalist Lifestyle: Hidup Lebih Bermakna",category:"lifestyle"},
+  {id:6,title:"Revolusi Industri 5.0",category:"teknologi"},
+  {id:7,title:"Investasi Crypto 2026",category:"bisnis"},
+  {id:8,title:"Remote Work: Masa Depan Bekerja",category:"lifestyle"},
+  {id:9,title:"Manfaat Meditasi untuk Kesehatan Mental",category:"health"},
+  {id:10,title:"Mobil Listrik 2026: Mana yang Paling Worth It?",category:"otomotif"},
+  {id:11,title:"Motor Sport 2026",category:"otomotif"},
+  {id:12,title:"Pemerintah Targetkan 100% Energi Terbarukan di Bali",category:"nasional"},
+  {id:13,title:"Proyek IKN Nusantara Capai 60% Pembangunan",category:"nasional"},
+  {id:14,title:"BPJS Kesehatan Luncurkan Layanan Dokter AI",category:"nasional"},
+  {id:15,title:"Pertumbuhan Ekonomi Indonesia Q1 2026 Capai 5,8%",category:"nasional"},
+  {id:16,title:"Program Beasiswa Nusantara 2026",category:"nasional"},
+  {id:17,title:"Tol Trans-Sumatera Rampung",category:"nasional"},
+  {id:18,title:"Startup Unicorn Indonesia Ke-15 dari Agritech",category:"nasional"},
+  {id:19,title:"Kurikulum Merdeka: Coding & AI Wajib SD",category:"nasional"},
+  {id:20,title:"Indonesia Resmi Bergabung dengan CERN",category:"nasional"},
+  {id:21,title:"Gempa 6,2 SR Guncang Sulawesi Tengah",category:"nasional"},
+  {id:22,title:"OpenAI Luncurkan GPT-6",category:"internasional"},
+  {id:23,title:"PBB Sahkan Perjanjian Global Regulasi AI",category:"internasional"},
+  {id:24,title:"Tiongkok Luncurkan Stasiun Luar Angkasa Kedua",category:"internasional"},
+  {id:25,title:"WHO Deklarasikan Wabah Virus di Afrika Barat",category:"internasional"},
+  {id:26,title:"Konflik Dagang AS–Eropa: Tarif Digital",category:"internasional"},
+  {id:27,title:"Pemilu Jepang 2026: Generasi Muda Penentu",category:"internasional"},
+  {id:28,title:"Krisis Air Global: 3 Miliar Orang Terancam",category:"internasional"},
+  {id:29,title:"SpaceX Berhasil Mendarat di Mars",category:"internasional"},
+  {id:30,title:"Ekonomi Global 2026: IMF Proyeksikan 3,2%",category:"internasional"},
+  {id:31,title:"Kesepakatan Damai Bersejarah di Timur Tengah",category:"internasional"},
+  {id:32,title:"Diet Mediterania 2026: Pola Makan Terbaik",category:"health"},
+  {id:33,title:"Passive Income 2026: 7 Cara Menghasilkan Uang",category:"bisnis"},
+  {id:34,title:"Traveling Solo ke Eropa 2026",category:"lifestyle"},
+  {id:35,title:"Quantum Computing untuk Pemula",category:"teknologi"},
+  {id:36,title:"Bisnis Online Lokal Semakin Berkembang",category:"bisnis"},
+  {id:37,title:"Olahraga 30 Menit Sehari",category:"health"},
+  {id:38,title:"Solar Panel Rumah: Investasi 2026",category:"teknologi"},
+  {id:39,title:"Psikologi di Balik Kebiasaan Buruk",category:"health"},
+  {id:40,title:"Bukan Cinderella",category:"novel"},
+  {id:41,title:"SUV Terlaris Indonesia 2026",category:"otomotif"},
+  {id:42,title:"10 Film Action Terbaik 2026",category:"film"},
+  {id:43,title:"Film Horror Asia 2026",category:"film"},
+  {id:44,title:"Drama Romance Terbaik 2026",category:"film"},
+  {id:45,title:"Film Sci-Fi 2026",category:"film"},
+  {id:46,title:"Animasi Terbaik 2026",category:"film"},
+  {id:47,title:"Film Dokumenter 2026",category:"film"},
+  {id:50,title:"Salah Kirim, Salah Hati",category:"novel"},
+  {id:51,title:"Penjaga Pintu Neraka",category:"novel"},
+  {id:52,title:"Istri Kontrak Tuan Muda Dingin",category:"novel"},
+  {id:53,title:"Bayangan di Lorong 7",category:"novel"},
+  {id:54,title:"Kamu yang Ketiga",category:"novel"},
+  {id:55,title:"Akhir dari Dunia yang Tidak Berakhir",category:"novel"},
+  {id:56,title:"Satu Atap, Seribu Masalah",category:"novel"},
+  {id:57,title:"Darah Perak",category:"novel"},
+  {id:58,title:"24 Jam Bersamamu",category:"novel"},
+];
 
 const ADMIN_USERS = [
   { email:'admin@denscope.com', password:'admin123', name:'Denis Arya Buana', role:'admin',
@@ -419,36 +482,25 @@ const ADMIN_USERS = [
 
 // ── AUTH ──
 function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass  = document.getElementById('loginPass').value;
-  const btn   = document.getElementById('loginBtnText');
-  const err   = document.getElementById('loginErr');
-  const loginBtn = btn.parentElement;
-
-  err.style.display = 'none';
-  if (!email || !pass) { err.textContent='Email dan password wajib diisi.'; err.style.display='block'; return; }
-
-  btn.textContent = 'Masuk...'; loginBtn.disabled = true;
-
-  function loginFail(msg) {
-    err.textContent = msg; err.style.display = 'block';
-    btn.textContent = 'Masuk ke Dashboard'; loginBtn.disabled = false;
-  }
-
-  const hardUser = ADMIN_USERS.find(u => u.email === email && u.password === pass);
-  if (hardUser) { currentUser=hardUser; localStorage.setItem('adminUser',JSON.stringify(hardUser)); showApp(); return; }
-
-  let done = false;
-  const timer = setTimeout(() => { if(!done){done=true;loginFail('Koneksi lambat, coba lagi.');} }, 8000);
-
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtnText');
+  const err=document.getElementById('loginErr');
+  const loginBtn=btn.parentElement;
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Email dan password wajib diisi.';err.style.display='block';return;}
+  btn.textContent='Masuk...'; loginBtn.disabled=true;
+  function loginFail(msg){err.textContent=msg;err.style.display='block';btn.textContent='Masuk ke Dashboard';loginBtn.disabled=false;}
+  const hardUser=ADMIN_USERS.find(u=>u.email===email&&u.password===pass);
+  if(hardUser){currentUser=hardUser;localStorage.setItem('adminUser',JSON.stringify(hardUser));showApp();return;}
+  let done=false;
+  const timer=setTimeout(()=>{if(!done){done=true;loginFail('Koneksi lambat, coba lagi.');}},8000);
   sb.from('admin_users').select('*').eq('email',email).eq('password',pass).single()
-    .then(({data,error}) => {
-      if(done)return; done=true; clearTimeout(timer);
-      if(!data||error){ loginFail('Email atau password salah.'); return; }
-      if(data.role==='user'){ loginFail('Akun ini tidak punya akses ke dashboard.'); return; }
-      currentUser=data; localStorage.setItem('adminUser',JSON.stringify(data)); showApp();
-    })
-    .catch(e => { if(done)return; done=true; clearTimeout(timer); loginFail('Gagal terhubung: '+(e.message||'error')); });
+    .then(({data,error})=>{if(done)return;done=true;clearTimeout(timer);
+      if(!data||error){loginFail('Email atau password salah.');return;}
+      if(data.role==='user'){loginFail('Akun ini tidak punya akses ke dashboard.');return;}
+      currentUser=data;localStorage.setItem('adminUser',JSON.stringify(data));showApp();})
+    .catch(e=>{if(done)return;done=true;clearTimeout(timer);loginFail('Error: '+(e.message||'?'));});
 }
 
 function doLogout() {
@@ -474,15 +526,12 @@ function showApp() {
 
 document.getElementById('loginEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-window.addEventListener('load', () => {
-  try { const s=localStorage.getItem('adminUser'); if(s){currentUser=JSON.parse(s);showApp();} }
-  catch(e){ localStorage.removeItem('adminUser'); }
-});
+window.addEventListener('load',()=>{try{const s=localStorage.getItem('adminUser');if(s){currentUser=JSON.parse(s);showApp();}}catch(e){localStorage.removeItem('adminUser');}});
 
 // ── LOAD DATA ──
 async function loadAllData() {
   try {
-    await Promise.all([loadArticles(),loadCategories(),loadTags(),loadAuthors(),loadUsers(),loadComments(),loadMedia()]);
+    await Promise.all([loadArticles(),loadCategories(),loadTags(),loadAuthors(),loadUsers(),loadComments(),loadMedia(),loadLiveStats()]);
   } catch(e) { console.warn('loadAllData:', e); }
   updateCounts();
 }
@@ -526,15 +575,26 @@ function handleGlobalSearch(q) {
 
 // ── DASHBOARD ──
 function renderDashboard(el) {
+  const STATIC_COUNT=DENSCOPE_STATIC.length;
   const published=allArticles.filter(a=>a.status==='published').length;
   const draft=allArticles.filter(a=>a.status==='draft').length;
-  const totalViews=allArticles.reduce((s,a)=>s+(a.views||0),0);
+  const totalArtikel=STATIC_COUNT+allArticles.length;
+  const totalViews=liveStats.reduce((s,r)=>s+Number(r.views||0),0);
+  const totalLikes=liveStats.reduce((s,r)=>s+Number(r.likes||0),0);
+  const pendingCmt=allComments.filter(c=>!c.approved).length;
+  const statsMap={};liveStats.forEach(r=>{statsMap[String(r.article_id)]=r;});
+  const mergedTop=[
+    ...DENSCOPE_STATIC.map(a=>({id:String(a.id),title:a.title,category:a.category,views:Number(statsMap[String(a.id)]?.views||0),source:'denscope'})),
+    ...allArticles.map(a=>({id:String(a.id),title:a.title||'Tanpa judul',category:a.category||'lainnya',views:Number(statsMap[String(a.id)]?.views||0),source:'admin'}))
+  ].sort((a,b)=>b.views-a.views);
+  const top5=mergedTop.slice(0,5);
+  const maxV=top5[0]?.views||1;
   el.innerHTML=`
   <div class="stats-grid">
-    <div class="stat-card purple"><div class="stat-icon purple"><i class="fas fa-newspaper"></i></div><div class="stat-value">${allArticles.length}</div><div class="stat-label">Total Artikel</div><div class="stat-change up">${published} published, ${draft} draft</div></div>
-    <div class="stat-card blue"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value">${allUsers.length}</div><div class="stat-label">Pengguna Daftar</div><div class="stat-change up"><i class="fas fa-arrow-up"></i> Via register</div></div>
-    <div class="stat-card green"><div class="stat-icon green"><i class="fas fa-eye"></i></div><div class="stat-value">${fmtNum(totalViews)}</div><div class="stat-label">Total Views</div></div>
-    <div class="stat-card orange"><div class="stat-icon orange"><i class="fas fa-comments"></i></div><div class="stat-value">${allComments.length}</div><div class="stat-label">Komentar</div></div>
+    <div class="stat-card purple"><div class="stat-icon purple"><i class="fas fa-newspaper"></i></div><div class="stat-value">${totalArtikel}</div><div class="stat-label">Total Artikel</div><div class="stat-change up">${STATIC_COUNT} statis · ${allArticles.length} DB (${published} live)</div></div>
+    <div class="stat-card blue"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value">${allUsers.length}</div><div class="stat-label">Pengguna Daftar</div><div class="stat-change up"><i class="fas fa-arrow-up"></i> Via register Denscope</div></div>
+    <div class="stat-card green"><div class="stat-icon green"><i class="fas fa-eye"></i></div><div class="stat-value">${fmtNum(totalViews)}</div><div class="stat-label">Total Views</div><div class="stat-change up"><i class="fas fa-heart"></i> ${fmtNum(totalLikes)} likes · realtime</div></div>
+    <div class="stat-card orange"><div class="stat-icon orange"><i class="fas fa-comments"></i></div><div class="stat-value">${allComments.length}</div><div class="stat-label">Komentar</div><div class="stat-change ${pendingCmt>0?'up':''}">${pendingCmt>0?pendingCmt+' menunggu persetujuan':'Semua disetujui'}</div></div>
   </div>
   <div class="grid-3">
     <div class="panel">
@@ -542,35 +602,49 @@ function renderDashboard(el) {
       <div class="panel-body"><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
     </div>
     <div class="panel">
-      <div class="panel-head"><div class="panel-title"><i class="fas fa-fire" style="color:var(--orange)"></i> Artikel Terpopuler</div></div>
+      <div class="panel-head"><div class="panel-title"><i class="fas fa-fire" style="color:var(--orange)"></i> Artikel Terpopuler</div><span style="font-size:11px;color:var(--text3)">Realtime</span></div>
       <div class="panel-body">
-        <ul class="top-articles">
-          ${[...allArticles].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,5).map((a,i)=>`
-          <li class="top-article-item">
-            <div class="top-num ${i===0?"first":""}"><span>${i+1}</span></div>
-            <div class="top-article-info">
-              <div class="t-title">${a.title||'Tanpa judul'}</div>
-              <div class="t-views"><i class="fas fa-eye"></i> ${fmtNum(a.views||0)} views</div>
-              <div class="top-bar"><div class="top-bar-fill" style="width:${Math.min(100,((a.views||0)/Math.max(1,[...allArticles].sort((x,y)=>(y.views||0)-(x.views||0))[0]?.views||1)*100))}%"></div></div>
-            </div>
-          </li>`).join('')}
-        </ul>
+        ${top5.length===0||maxV<=1?
+          '<div class="empty-state" style="padding:20px 0"><i class="fas fa-eye-slash"></i><p style="margin-top:8px;font-size:13px;">Belum ada artikel yang dibaca visitor</p></div>'
+          :'<ul class="top-articles">'+top5.map((a,i)=>`<li class="top-article-item"><div class="top-num ${i===0?'first':''}"><span>${i+1}</span></div><div class="top-article-info"><div class="t-title">${a.title}${a.source==='admin'?'<span style="font-size:9px;background:rgba(108,99,255,.2);color:var(--accent2);padding:1px 5px;border-radius:4px;margin-left:4px;">DB</span>':''}</div><div class="t-views"><i class="fas fa-eye"></i> ${fmtNum(a.views)} views &nbsp;·&nbsp;<span class="badge cat" style="font-size:10px;padding:1px 5px;">${a.category}</span></div><div class="top-bar"><div class="top-bar-fill" style="width:${maxV>0?Math.min(100,(a.views/maxV)*100):0}%"></div></div></div></li>`).join('')+'</ul>'
+        }
       </div>
     </div>
   </div>
   <div class="panel">
-    <div class="panel-head"><div class="panel-title"><i class="fas fa-clock" style="color:var(--accent3)"></i> Artikel Terbaru</div><button class="btn btn-primary btn-sm" onclick="navigate('articles','new')"><i class="fas fa-plus"></i> Baru</button></div>
+    <div class="panel-head"><div class="panel-title"><i class="fas fa-clock" style="color:var(--accent3)"></i> Artikel Terbaru (DB)</div><button class="btn btn-primary btn-sm" onclick="navigate('articles','new')"><i class="fas fa-plus"></i> Baru</button></div>
     <div class="panel-body" style="padding:0;">
       <div class="table-wrap"><table>
-        <thead><tr><th>Judul</th><th>Status</th><th>Kategori</th><th>Views</th><th>Tanggal</th></tr></thead>
-        <tbody>${allArticles.slice(0,6).map(a=>`
-        <tr onclick="editArticle('${a.id}')" style="cursor:pointer">
-          <td><div class="td-title">${a.title||'—'}<small>/${a.slug||'...'}</small></div></td>
-          <td>${statusBadge(a.status)}</td>
-          <td><span class="badge cat">${a.category||'—'}</span></td>
-          <td>${fmtNum(a.views||0)}</td>
-          <td>${fmtDate(a.created_at)}</td>
-        </tr>`).join('')}</tbody>
+        <thead><tr>
+          <th>Thumbnail</th><th>Judul</th><th>Status</th><th>Kategori</th>
+          <th><i class="fas fa-eye"></i> Views</th>
+          <th><i class="fas fa-heart"></i> Likes</th>
+          <th><i class="fas fa-comments"></i> Komentar</th>
+          <th>Tanggal</th>
+        </tr></thead>
+        <tbody>${allArticles.slice(0,6).map(a=>{
+          const sid   = String(a.id);
+          const stat  = statsMap[sid]||{};
+          const views = Number(stat.views||0);
+          const likes = Number(stat.likes||0);
+          const saves = Number(stat.saves||0);
+          const cmts  = allComments.filter(c=>String(c.article_id)===sid).length;
+          return`<tr onclick="editArticle('${a.id}')" style="cursor:pointer">
+            <td><img class="td-img" src="${a.thumbnail||'https://placehold.co/80x50?text=No+Img'}" onerror="this.src='https://placehold.co/80x50?text=No+Img'" style="width:72px;height:46px;object-fit:cover;border-radius:6px;"></td>
+            <td><div class="td-title">${a.title||'—'}<small>/${a.slug||'...'}</small></div></td>
+            <td>${statusBadge(a.status)}</td>
+            <td><span class="badge cat">${a.category||'—'}</span></td>
+            <td style="font-weight:${views>0?'600':'400'};color:${views>0?'var(--text1)':'var(--text3)'}">
+              ${fmtNum(views)}${saves>0?`<span style="font-size:10px;color:var(--text3);margin-left:4px;" title="${fmtNum(saves)} disimpan"><i class="fas fa-bookmark"></i> ${fmtNum(saves)}</span>`:''}
+            </td>
+            <td style="color:${likes>0?'#f87171':'var(--text3)'};font-weight:${likes>0?'600':'400'}">
+              ${likes>0?'<i class="fas fa-heart" style="font-size:10px;margin-right:2px;"></i>':''}${fmtNum(likes)}
+            </td>
+            <td style="color:${cmts>0?'var(--accent3)':'var(--text3)'};font-weight:${cmts>0?'600':'400'}">
+              ${cmts>0?'<i class="fas fa-comment" style="font-size:10px;margin-right:2px;"></i>':''}${fmtNum(cmts)}
+            </td>
+            <td>${fmtDate(a.created_at)}</td>
+          </tr>`;}).join('')}</tbody>
       </table></div>
     </div>
   </div>`;
@@ -595,24 +669,60 @@ function renderArticles(el,action) {
     <button class="btn btn-primary" onclick="openNewArticle()"><i class="fas fa-plus"></i> Artikel Baru</button>
   </div>
   <div class="panel"><div class="panel-body" style="padding:0;"><div class="table-wrap" id="articlesTable">${renderArticleRows(allArticles)}</div></div></div>`;
-  if(action==='new')setTimeout(()=>openNewArticle(),100);setupScheduler(); startUserPolling();
+  if(action==='new')setTimeout(()=>openNewArticle(),100);setupScheduler();startUserPolling();
 }
 
 function renderArticleRows(arts) {
   if(!arts.length)return`<div class="empty-state"><i class="fas fa-newspaper"></i><p>Belum ada artikel</p></div>`;
-  return`<table><thead><tr><th>Thumbnail</th><th>Judul</th><th>Status</th><th>Kategori</th><th>Views</th><th>Tanggal</th><th>Aksi</th></tr></thead><tbody>
-  ${arts.map(a=>`<tr>
+  // Bangun map dari liveStats (article_stats Supabase) untuk lookup cepat
+  const sMap={};
+  liveStats.forEach(r=>{ sMap[String(r.article_id)]=r; });
+  // Bangun map komentar per artikel
+  const cmtMap={};
+  allComments.forEach(c=>{ const k=String(c.article_id); cmtMap[k]=(cmtMap[k]||0)+1; });
+
+  return`<table><thead><tr>
+    <th>Thumbnail</th><th>Judul</th><th>Status</th><th>Kategori</th>
+    <th><i class="fas fa-eye" title="Views"></i> Views</th>
+    <th><i class="fas fa-heart" title="Likes"></i> Likes</th>
+    <th><i class="fas fa-comments" title="Komentar"></i> Komentar</th>
+    <th>Tanggal</th><th>Aksi</th>
+  </tr></thead><tbody>
+  ${arts.map(a=>{
+    const sid    = String(a.id);
+    const stat   = sMap[sid] || {};
+    const views  = Number(stat.views  || 0);
+    const likes  = Number(stat.likes  || 0);
+    const saves  = Number(stat.saves  || 0);
+    const cmts   = cmtMap[sid] || 0;
+    const hasData = views>0||likes>0||cmts>0;
+    return`<tr>
     <td><img class="td-img" src="${a.thumbnail||'https://placehold.co/80x50?text=No+Img'}" onerror="this.src='https://placehold.co/80x50?text=No+Img'"></td>
     <td><div class="td-title">${a.title||'Tanpa judul'}<small>/${a.slug||'...'}</small></div></td>
     <td>${statusBadge(a.status)}</td>
     <td><span class="badge cat">${a.category||'—'}</span></td>
-    <td>${fmtNum(a.views||0)}</td>
+    <td>
+      <span style="font-weight:${views>0?'600':'400'};color:${views>0?'var(--text1)':'var(--text3)'}">
+        ${fmtNum(views)}
+      </span>
+      ${saves>0?`<span style="font-size:10px;color:var(--text3);margin-left:3px;" title="${fmtNum(saves)} disimpan"><i class="fas fa-bookmark"></i>${fmtNum(saves)}</span>`:''}
+    </td>
+    <td>
+      <span style="font-weight:${likes>0?'600':'400'};color:${likes>0?'#f87171':'var(--text3)'}">
+        ${likes>0?'<i class="fas fa-heart" style="font-size:10px;margin-right:2px;"></i>':''}${fmtNum(likes)}
+      </span>
+    </td>
+    <td>
+      <span style="font-weight:${cmts>0?'600':'400'};color:${cmts>0?'var(--accent3)':'var(--text3)'}">
+        ${cmts>0?'<i class="fas fa-comment" style="font-size:10px;margin-right:2px;"></i>':''}${fmtNum(cmts)}
+      </span>
+    </td>
     <td>${fmtDate(a.created_at)}</td>
     <td><div style="display:flex;gap:6px;">
       <button class="btn btn-ghost btn-sm" onclick="editArticle('${a.id}')"><i class="fas fa-edit"></i></button>
       <button class="btn btn-danger btn-sm" onclick="confirmDelete('artikel','${a.id}','admin_articles')"><i class="fas fa-trash"></i></button>
     </div></td>
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`;}).join('')}</tbody></table>`;
 }
 
 function filterArticles() {
@@ -685,11 +795,23 @@ function renderCategories(el) {
   el.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:20px;"><button class="btn btn-primary" onclick="openNewCategory()"><i class="fas fa-plus"></i> Tambah Kategori</button></div>
   <div class="panel"><div class="panel-body" style="padding:0;"><div class="table-wrap"><table>
     <thead><tr><th>Nama</th><th>Slug</th><th>Deskripsi</th><th>Jumlah Artikel</th><th>Aksi</th></tr></thead>
-    <tbody>${allCategories.length?allCategories.map(c=>{const count=allArticles.filter(a=>a.category===c.name).length;return`<tr>
+    <tbody>${allCategories.length?allCategories.map(c=>{
+      const slug       = (c.slug||c.name).toLowerCase();
+      const staticCount= DENSCOPE_STATIC.filter(a=>a.category===slug).length;
+      const adminCount = allArticles.filter(a=>(a.category||'').toLowerCase()===slug).length;
+      const total      = staticCount + adminCount;
+      return`<tr>
       <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:14px;height:14px;border-radius:4px;background:${c.color||'var(--accent)'}"></div><strong>${c.name}</strong></div></td>
       <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent3)">${c.slug||'—'}</code></td>
       <td style="color:var(--text2);max-width:200px">${c.description||'—'}</td>
-      <td><span class="badge cat">${count} artikel</span></td>
+      <td>
+        <span class="badge cat" title="Total: ${total} artikel">${total} artikel</span>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+          ${staticCount>0?`<span style="font-size:10px;background:rgba(34,197,94,.12);color:#86efac;border-radius:4px;padding:1px 6px;">Statis ×${staticCount}</span>`:''}
+          ${adminCount>0?`<span style="font-size:10px;background:rgba(108,99,255,.12);color:var(--accent2);border-radius:4px;padding:1px 6px;">DB ×${adminCount}</span>`:''}
+          ${total===0?`<span style="font-size:10px;color:var(--text3);">Belum ada artikel</span>`:''}
+        </div>
+      </td>
       <td><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="editCategory('${c.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="confirmDelete('kategori','${c.id}','admin_categories')"><i class="fas fa-trash"></i></button></div></td>
     </tr>`;}).join(''):`<tr><td colspan="5"><div class="empty-state"><i class="fas fa-folder-open"></i><p>Belum ada kategori</p></div></td></tr>`}
     </tbody></table></div></div></div>`;
@@ -699,35 +821,117 @@ function editCategory(id){const c=allCategories.find(x=>x.id==id);if(!c)return;e
 async function saveCategory(){const name=document.getElementById('catName').value.trim();if(!name){showToast('Nama kategori wajib diisi','error');return;}const payload={name,slug:document.getElementById('catSlug').value||slugify(name),description:document.getElementById('catDesc').value,color:document.getElementById('catColor').value};let error;if(editingCatId){({error}=await sb.from('admin_categories').update(payload).eq('id',editingCatId));}else{({error}=await sb.from('admin_categories').insert(payload));}if(error){showToast('Gagal: '+error.message,'error');return;}showToast('Kategori berhasil disimpan!','success');closeModal('categoryModal');await loadCategories();renderCategories(document.getElementById('pageContent'));}
 
 // ── TAGS ──
-function renderTags(el){el.innerHTML=`<div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;"><input class="filter-input" id="newTagInput" placeholder="Nama tag baru..." style="flex:1;max-width:300px;"><button class="btn btn-primary" onclick="addTag()"><i class="fas fa-plus"></i> Tambah Tag</button></div><div class="panel"><div class="panel-body"><div style="display:flex;flex-wrap:wrap;gap:10px;" id="tagsList">${allTags.length?allTags.map(t=>`<div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;"><span class="badge tag">#${t.name}</span><span style="font-size:12px;color:var(--text3)">${allArticles.filter(a=>(a.tags||[]).includes(t.name)).length} artikel</span><button style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 4px;font-size:12px;" onclick="deleteTag('${t.id}')"><i class="fas fa-times"></i></button></div>`).join(''):'<p style="color:var(--text3)">Belum ada tag</p>'}</div></div></div>`;document.getElementById('newTagInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTag();});}
+function renderTags(el) {
+  // Hitung total artikel per tag: admin DB + statis Denscope
+  function tagTotal(name) {
+    const adminCount   = allArticles.filter(a=>(a.tags||[]).includes(name)).length;
+    const staticCount  = DENSCOPE_TAG_COUNT[name] || 0;
+    return { adminCount, staticCount, total: adminCount + staticCount };
+  }
+
+  // Kumpulkan semua tag unik: dari admin_tags + dari DENSCOPE_TAG_COUNT
+  const allTagNames = new Set([
+    ...allTags.map(t=>t.name),
+    ...Object.keys(DENSCOPE_TAG_COUNT)
+  ]);
+
+  // Tag yang ada di admin_tags tapi belum di DENSCOPE (baru ditambahkan admin)
+  const adminOnlyTags = allTags.filter(t=>!(t.name in DENSCOPE_TAG_COUNT));
+
+  // Hitung summary
+  const totalTagCount = allTagNames.size;
+  const syncedCount   = allTags.filter(t=>t.name in DENSCOPE_TAG_COUNT).length;
+
+  el.innerHTML=`
+  <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+    <input class="filter-input" id="newTagInput" placeholder="Nama tag baru..." style="flex:1;min-width:200px;max-width:320px;">
+    <button class="btn btn-primary" onclick="addTag()"><i class="fas fa-plus"></i> Tambah Tag</button>
+    <div style="margin-left:auto;display:flex;gap:8px;font-size:12px;color:var(--text3);align-items:center;">
+      <span style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:3px 10px;color:#86efac;">
+        <i class="fas fa-link"></i> ${syncedCount} tersinkron dengan Denscope
+      </span>
+      <span style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;">
+        ${totalTagCount} total tag unik
+      </span>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:16px;padding:12px 16px;background:rgba(108,99,255,0.07);border:1px solid rgba(108,99,255,0.2);border-radius:12px;font-size:12px;color:var(--text2);align-items:flex-start;gap:12px;">
+    <i class="fas fa-info-circle" style="color:var(--accent);margin-top:1px;flex-shrink:0;"></i>
+    <div>
+      Tag yang ada di <strong>artikel statis Denscope</strong> (56 artikel) ditampilkan dengan badge
+      <span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:4px;padding:1px 6px;font-size:11px;">Denscope</span>.
+      Jumlah artikel menggabungkan statis + artikel dari database admin.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-tags" style="color:var(--accent2)"></i> Tag dari Artikel Statis Denscope</div>
+      <span style="font-size:11px;color:var(--text3)">${Object.keys(DENSCOPE_TAG_COUNT).length} tag</span>
+    </div>
+    <div class="panel-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="staticTagsList">
+        ${Object.entries(DENSCOPE_TAG_COUNT).sort((a,b)=>b[1]-a[1]).map(([name,count])=>{
+          const adminT = allTags.find(t=>t.name===name);
+          const adminCount = allArticles.filter(a=>(a.tags||[]).includes(name)).length;
+          const total = count + adminCount;
+          return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid ${adminT?'rgba(34,197,94,.4)':'var(--border)'};border-radius:20px;padding:5px 12px;">
+            <span style="font-size:13px;font-weight:500;">#${name}</span>
+            <span style="font-size:11px;background:rgba(34,197,94,.12);color:#86efac;border-radius:4px;padding:1px 5px;">Denscope ×${count}</span>
+            ${adminCount>0?`<span style="font-size:11px;background:rgba(108,99,255,.12);color:var(--accent2);border-radius:4px;padding:1px 5px;">DB ×${adminCount}</span>`:''}
+            <span style="font-size:11px;color:var(--text3);margin-left:2px;">${total} total</span>
+            ${adminT
+              ? `<button style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:11px;" onclick="deleteTag('${adminT.id}')" title="Hapus dari admin_tags"><i class="fas fa-times"></i></button>`
+              : `<button style="background:none;border:none;color:rgba(34,197,94,.6);cursor:pointer;padding:0 2px;font-size:11px;" onclick="importTag('${name}')" title="Tambahkan ke admin_tags"><i class="fas fa-plus-circle"></i></button>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>
+
+  ${adminOnlyTags.length>0?`
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-database" style="color:var(--accent)"></i> Tag Tambahan dari Admin</div>
+      <span style="font-size:11px;color:var(--text3)">${adminOnlyTags.length} tag</span>
+    </div>
+    <div class="panel-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${adminOnlyTags.map(t=>{
+          const adminCount=allArticles.filter(a=>(a.tags||[]).includes(t.name)).length;
+          return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;">
+            <span style="font-size:13px;font-weight:500;">#${t.name}</span>
+            ${adminCount>0?`<span style="font-size:11px;background:rgba(108,99,255,.12);color:var(--accent2);border-radius:4px;padding:1px 5px;">DB ×${adminCount}</span>`:'<span style="font-size:11px;color:var(--text3);">0 artikel</span>'}
+            <button style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:11px;" onclick="deleteTag('${t.id}')"><i class="fas fa-times"></i></button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`:''}`;
+
+  const inp = document.getElementById('newTagInput');
+  if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter') addTag(); });
+}
+
+// Import tag dari statis Denscope ke admin_tags
+async function importTag(name) {
+  const{error}=await sb.from('admin_tags').insert({name, slug:slugify(name)});
+  if(error){showToast('Gagal import tag: '+error.message,'error');return;}
+  showToast('#'+name+' ditambahkan ke admin tags!','success');
+  await loadTags(); renderTags(document.getElementById('pageContent'));
+}
 async function addTag(){const name=document.getElementById('newTagInput').value.trim();if(!name)return;const{error}=await sb.from('admin_tags').insert({name,slug:slugify(name)});if(error){showToast('Gagal: '+error.message,'error');return;}showToast('Tag ditambahkan!','success');document.getElementById('newTagInput').value='';await loadTags();renderTags(document.getElementById('pageContent'));}
 async function deleteTag(id){const{error}=await sb.from('admin_tags').delete().eq('id',id);if(error){showToast('Gagal hapus tag','error');return;}showToast('Tag dihapus','info');await loadTags();renderTags(document.getElementById('pageContent'));}
 
 // ── USERS (Pengguna register) ──
 function renderUsers(el) {
-  const newestUser = allUsers[0];
-  const newestAlert = newestUser ? `
-  <div id="newUserAlert" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px 18px;background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.35);border-radius:14px;animation:alertPop .4s ease;">
-    <img src="${newestUser.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(newestUser.name||'U')+'&background=22c55e&color=fff&size=80'}"
-      style="width:46px;height:46px;border-radius:50%;border:2px solid rgba(34,197,94,0.5);flex-shrink:0;">
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#86efac;font-weight:700;margin-bottom:3px;">
-        <i class="fas fa-circle" style="font-size:7px;margin-right:5px;animation:pulse 1.5s infinite;"></i>Pendaftar Terbaru
-      </div>
-      <div style="font-weight:700;font-size:14px;color:#f0f0ff;">${newestUser.name}</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:2px;">${newestUser.email} &nbsp;·&nbsp; ${fmtDate(newestUser.created_at)}</div>
-    </div>
-    <div style="text-align:right;flex-shrink:0;">
-      <div style="font-size:11px;color:#86efac;margin-bottom:4px;">Total pendaftar</div>
-      <div style="font-size:22px;font-weight:800;color:#22c55e;">${allUsers.length}</div>
-    </div>
-  </div>` : '';
-
   el.innerHTML=`
-  ${newestAlert}
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:11px 15px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.18);border-radius:12px;font-size:13px;color:#86efac;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:12px;font-size:13px;color:#86efac;">
     <i class="fas fa-user-plus"></i>
     <span>Pengguna yang mendaftar melalui halaman Register Denscope</span>
+    <span class="user-count-badge" style="margin-left:auto;">${allUsers.length} pengguna</span>
   </div>
   <div class="filter-bar">
     <input class="filter-input" id="userSearch" placeholder="🔍 Cari nama atau email..." oninput="filterUsers()" style="flex:1;max-width:320px;">
@@ -737,50 +941,18 @@ function renderUsers(el) {
 
 function renderUserRows(users) {
   if(!users.length) return`<div class="empty-state"><i class="fas fa-users"></i><p>Belum ada pengguna yang mendaftar</p></div>`;
-  return`<table><thead><tr>
-    <th>Avatar</th><th>Nama</th><th>Email</th><th>Password</th><th>Role</th><th>Bergabung</th><th>Aksi</th>
-  </tr></thead><tbody>
-  ${users.map(u=>{
-    const pw = u.password||'-';
-    const masked = pw==='- ' ? '-' : '•'.repeat(Math.min(pw.length,10));
-    const uid = u.id;
-    return `<tr>
+  return`<table><thead><tr><th>Avatar</th><th>Nama</th><th>Email</th><th>Role</th><th>Bergabung</th><th>Aksi</th></tr></thead><tbody>
+  ${users.map(u=>`<tr>
     <td><img style="width:38px;height:38px;border-radius:50%;object-fit:cover;" src="${u.avatar||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.name)+'&background=0f2b3d&color=fff'}"></td>
     <td><strong>${u.name}</strong></td>
     <td style="color:var(--text2)">${u.email}</td>
-    <td>
-      <span style="display:flex;align-items:center;gap:6px;">
-        <code id="pw_${uid}" style="font-size:12px;background:var(--bg3);padding:3px 7px;border-radius:6px;letter-spacing:1px;">${masked}</code>
-        <button onclick="togglePw('${uid}','${pw}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;" title="Tampilkan/Sembunyikan">
-          <i id="pwico_${uid}" class="fas fa-eye"></i>
-        </button>
-      </span>
-    </td>
     <td>${roleBadge(u.role)}</td>
     <td style="color:var(--text3)">${fmtDate(u.created_at)}</td>
     <td><div style="display:flex;gap:6px;">
-      <button class="btn btn-warning btn-sm" title="Jadikan Author" onclick="promoteUser('${uid}','author')"><i class="fas fa-user-edit"></i> Author</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDelete('pengguna','${uid}','admin_users')"><i class="fas fa-trash"></i></button>
+      <button class="btn btn-warning btn-sm" title="Jadikan Author" onclick="promoteUser('${u.id}','author')"><i class="fas fa-user-edit"></i> Author</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('pengguna','${u.id}','admin_users')"><i class="fas fa-trash"></i></button>
     </div></td>
-  </tr>`;}).join('')}</tbody></table>`;
-}
-
-// Toggle tampil/sembunyikan password di tabel
-const _pwVisible = {};
-function togglePw(uid, pw) {
-  _pwVisible[uid] = !_pwVisible[uid];
-  const el  = document.getElementById('pw_' + uid);
-  const ico = document.getElementById('pwico_' + uid);
-  if (!el) return;
-  if (_pwVisible[uid]) {
-    el.textContent = pw;
-    el.style.color = '#86efac';
-    if (ico) ico.className = 'fas fa-eye-slash';
-  } else {
-    el.textContent = '•'.repeat(Math.min(pw.length, 10));
-    el.style.color = '';
-    if (ico) ico.className = 'fas fa-eye';
-  }
+  </tr>`).join('')}</tbody></table>`;
 }
 
 function filterUsers() {
@@ -847,7 +1019,6 @@ function handleDrop(e){e.preventDefault();document.getElementById('uploadZone').
 async function uploadFiles(files,gridId){for(const file of files){if(!file.type.startsWith('image/'))continue;if(file.size>5*1024*1024){showToast(file.name+' terlalu besar (max 5MB)','error');continue;}const reader=new FileReader();reader.onload=async(ev)=>{const url=ev.target.result;const{data,error}=await sb.from('admin_media').insert({name:file.name,url,size:file.size,type:file.type,created_at:new Date().toISOString()}).select().single();if(!error&&data){allMedia.unshift(data);const g1=document.getElementById('mediaGrid');const g2=document.getElementById('mediaGrid2');if(g1)g1.innerHTML=renderMediaGridModal(allMedia);if(g2)g2.innerHTML=renderMediaGrid(allMedia);showToast(file.name+' berhasil diupload!','success');}else{showToast('Gagal upload: '+(error?.message||''),'error');}};reader.readAsDataURL(file);}}
 
 // ── ANALYTICS ──
-let liveStats=[];
 async function loadLiveStats(){const{data}=await sb.from('article_stats').select('*');liveStats=data||[];}
 async function renderAnalytics(el) {
   el.innerHTML=`<div class="page-loader"><div class="spinner"></div> Memuat data analytics...</div>`;
@@ -856,41 +1027,12 @@ async function renderAnalytics(el) {
   const totalLikes=liveStats.reduce((s,r)=>s+Number(r.likes||0),0);
   const totalSaves=liveStats.reduce((s,r)=>s+Number(r.saves||0),0);
   const{count:uniqueVisitors}=await sb.from('article_interactions').select('user_id',{count:'exact',head:true});
-  const DENSCOPE_COUNT=56;
+  const DENSCOPE_COUNT=DENSCOPE_STATIC.length;
   const totalAll=DENSCOPE_COUNT+allArticles.length;
   const totalPublished=DENSCOPE_COUNT+allArticles.filter(a=>a.status==='published').length;
   const publishRate=totalAll?Math.round((totalPublished/totalAll)*100):100;
   const statsMap={};liveStats.forEach(r=>{statsMap[r.article_id]=r;});
-  const DENSCOPE_BASIC=[
-    {id:1,title:"Strategi Digital Marketing 2026",category:"teknologi"},{id:2,title:"Dia yang Selalu Ada di Ujung Malam",category:"novel"},
-    {id:3,title:"5 Tren AI yang Akan Mendominasi 2026",category:"teknologi"},{id:4,title:"Resep Rahasia Mie Ayam Bakso Spesial",category:"lifestyle"},
-    {id:5,title:"Review Honda CBR 250RR 2026",category:"otomotif"},{id:6,title:"Investasi Saham untuk Pemula 2026",category:"bisnis"},
-    {id:7,title:"5 Drama Korea Terbaik yang Wajib Ditonton",category:"film"},{id:8,title:"Tips Hidup Sehat di Era Digital",category:"health"},
-    {id:9,title:"Gempa Bumi 6,2 SR Guncang Sulawesi Tengah",category:"nasional"},{id:10,title:"SpaceX Berhasil Mendarat di Mars",category:"internasional"},
-    {id:11,title:"Manfaat Meditasi Harian",category:"health"},{id:12,title:"Cryptocurrency 2026",category:"bisnis"},
-    {id:13,title:"Review Film Interstellar 2",category:"film"},{id:14,title:"Cara Memulai Bisnis Online",category:"bisnis"},
-    {id:15,title:"Satu Atap, Seribu Masalah",category:"novel"},{id:16,title:"Toyota Fortuner 2026",category:"otomotif"},
-    {id:17,title:"Pemerintah Luncurkan Program Beasiswa",category:"nasional"},{id:18,title:"Kesepakatan Damai di Timur Tengah",category:"internasional"},
-    {id:19,title:"Istri Kontrak Tuan Muda Dingin",category:"novel"},{id:20,title:"WHO Deklarasikan Wabah Virus Baru",category:"internasional"},
-    {id:21,title:"OpenAI Luncurkan GPT-6",category:"teknologi"},{id:22,title:"5 Destinasi Wisata di Bali",category:"lifestyle"},
-    {id:23,title:"Cara Membuat Website dengan React",category:"teknologi"},{id:24,title:"Review Xiaomi 15 Pro",category:"teknologi"},
-    {id:25,title:"Passive Income 2026",category:"bisnis"},{id:26,title:"Rahasia Kulit Glowing",category:"health"},
-    {id:27,title:"Mahkamah Agung Tetapkan Putusan Bersejarah",category:"nasional"},{id:28,title:"PBB Sahkan Perjanjian Regulasi AI",category:"internasional"},
-    {id:29,title:"Kenangan di Ujung Rel",category:"novel"},{id:30,title:"Review Yamaha R15 V5 2026",category:"otomotif"},
-    {id:31,title:"Cara Investasi Reksa Dana",category:"bisnis"},{id:32,title:"Review Film Avengers: Secret Wars",category:"film"},
-    {id:33,title:"Tips Diet Sehat",category:"health"},{id:34,title:"Banjir Bandang Kalimantan Selatan",category:"nasional"},
-    {id:35,title:"Tiongkok Luncurkan Stasiun Luar Angkasa",category:"internasional"},{id:36,title:"Tutorial Flutter",category:"teknologi"},
-    {id:37,title:"10 Buku Self-Improvement Terbaik 2026",category:"lifestyle"},{id:38,title:"Review Film Dune: Part Three",category:"film"},
-    {id:39,title:"Skandal Korupsi Infrastruktur",category:"nasional"},{id:40,title:"Uni Eropa Regulasi Big Tech",category:"internasional"},
-    {id:41,title:"Cinta di Balik Layar",category:"novel"},{id:42,title:"Pemerintah Naikkan Gaji Minimum 15%",category:"nasional"},
-    {id:43,title:"Konflik Bersenjata di Asia Tengah",category:"internasional"},{id:44,title:"Review Film Batman: Dark Knight Returns",category:"film"},
-    {id:45,title:"Rahasia Sukses Pengusaha Muda",category:"bisnis"},{id:46,title:"Nostalgia di Kota Tua",category:"novel"},
-    {id:47,title:"Polisi Gerebek Sindikat Narkoba",category:"nasional"},{id:48,title:"Krisis Pangan Global",category:"internasional"},
-    {id:49,title:"Review Film Interstellar 2 (extended)",category:"film"},{id:50,title:"Sang Penjaga Janji",category:"novel"},
-    {id:51,title:"Pemilu 2026: Dinamika Politik",category:"nasional"},{id:52,title:"NATO Perkuat Pertahanan Eropa Timur",category:"internasional"},
-    {id:53,title:"Review Suzuki GSX-R150 2026",category:"otomotif"},{id:54,title:"Dua Hati di Persimpangan",category:"novel"},
-    {id:55,title:"Gempa 7,1 SR Guncang Papua",category:"nasional"},{id:56,title:"Review Film Gladiator III",category:"film"},
-  ];
+  const DENSCOPE_BASIC = DENSCOPE_STATIC; // pakai global
   const allMerged=[
     ...DENSCOPE_BASIC.map(a=>({...a,views:Number(statsMap[a.id]?.views||0),likes:Number(statsMap[a.id]?.likes||0),saves:Number(statsMap[a.id]?.saves||0),source:'denscope'})),
     ...allArticles.map(a=>({title:a.title||'Tanpa judul',category:a.category||'—',views:Number(statsMap[a.id]?.views||0),likes:Number(statsMap[a.id]?.likes||0),saves:Number(statsMap[a.id]?.saves||0),source:'admin'}))
@@ -985,55 +1127,45 @@ function showToast(msg,type='info'){const t=document.getElementById('toast');con
 // ── UTILS ──
 function fmtNum(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return n;}
 function fmtDate(s){if(!s)return'—';return new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});}
-function statusBadge(s){const map={published:'published',draft:'draft',scheduled:'scheduled'};const label={published:'✓ Published',draft:'○ Draft',scheduled:'⏰ Scheduled'};return`<span class="badge ${map[s]||'draft'}">${label[s]||s||'Draft'}</span>`;}
+function statusBadge(s){const map={published:'published',draft:'draft',scheduled:'scheduled'};const label={published:'Published',draft:'Draft',scheduled:'Scheduled'};return`<span class="badge ${map[s]||'draft'}">${label[s]||s||'Draft'}</span>`;}
 
-
-// ── REALTIME: cek user baru dari Denscope Register tiap 30 detik ──
-let _lastUserCount = 0;
-
-async function pollNewUsers() {
-  try {
-    const { data } = await sb.from('admin_users')
-      .select('id,name,email,avatar,created_at').eq('role','user')
-      .order('created_at',{ascending:false});
-    const fresh = data || [];
-    if (_lastUserCount > 0 && fresh.length > _lastUserCount) {
-      const added = fresh.length - _lastUserCount;
-      showNewUserToast(fresh[0], added);
-      await loadUsers(); updateCounts();
-      if (currentPage === 'users') renderUsers(document.getElementById('pageContent'));
+// ── REALTIME: polling user baru dari Denscope ──
+let _lastUserCount=0;
+async function pollNewUsers(){
+  try{
+    const{data}=await sb.from('admin_users').select('id,name,email,avatar,created_at').eq('role','user').order('created_at',{ascending:false});
+    const fresh=data||[];
+    if(_lastUserCount>0&&fresh.length>_lastUserCount){
+      showNewUserToast(fresh[0],fresh.length-_lastUserCount);
+      await loadUsers();updateCounts();
+      if(currentPage==='users')renderUsers(document.getElementById('pageContent'));
+      if(currentPage==='dashboard')renderDashboard(document.getElementById('pageContent'));
     }
-    _lastUserCount = fresh.length;
-  } catch(e) {}
+    _lastUserCount=fresh.length;
+  }catch(e){}
 }
-
-function dismissNewUserToast() { const el=document.getElementById('newUserToast'); if(el)el.remove(); }
-function goToUsersPage()       { dismissNewUserToast(); navigate('users'); }
-
-function showNewUserToast(user, count) {
+function dismissNewUserToast(){const el=document.getElementById('newUserToast');if(el)el.remove();}
+function goToUsersPage(){dismissNewUserToast();navigate('users');}
+function showNewUserToast(user,count){
   dismissNewUserToast();
-  const el = document.createElement('div');
-  el.id = 'newUserToast';
-  const av = user.avatar || ('https://ui-avatars.com/api/?name='+encodeURIComponent(user.name||'U')+'&background=22c55e&color=fff&size=80');
-  const extra = count > 1 ? ('<div style="font-size:11px;color:#a0a0c0;margin-top:2px;">+' + (count-1) + ' pengguna lainnya</div>') : '';
-  el.innerHTML =
-    '<div style="display:flex;align-items:center;gap:12px;">' +
-      '<img src="' + av + '" style="width:44px;height:44px;border-radius:50%;border:2px solid #22c55e;flex-shrink:0;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#86efac;font-weight:700;">Pendaftar Baru!</div>' +
-        '<div style="font-weight:700;font-size:13px;color:#f0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + user.name + '</div>' +
-        '<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + user.email + '</div>' +
-        extra +
-      '</div>' +
-      '<button onclick="goToUsersPage()" style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;white-space:nowrap;">Lihat</button>' +
-      '<button onclick="dismissNewUserToast()" style="background:none;border:none;color:#606080;cursor:pointer;font-size:20px;line-height:1;padding:0 4px;">&times;</button>' +
-    '</div>';
-  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1.5px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;width:310px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;animation:toastIn .35s ease;';
+  const el=document.createElement('div');el.id='newUserToast';
+  const av=user.avatar||('https://ui-avatars.com/api/?name='+encodeURIComponent(user.name||'U')+'&background=22c55e&color=fff&size=80');
+  const extra=count>1?('<div style="font-size:11px;color:#a0a0c0;margin-top:2px;">+'+(count-1)+' pengguna lainnya</div>'):'';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:12px;">'
+    +'<img src="'+av+'" style="width:44px;height:44px;border-radius:50%;border:2px solid #22c55e;flex-shrink:0;">'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#86efac;font-weight:700;">Pendaftar Baru!</div>'
+    +'<div style="font-weight:700;font-size:13px;color:#f0f0ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+user.name+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+user.email+'</div>'
+    +extra+'</div>'
+    +'<button onclick="goToUsersPage()" style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#86efac;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;white-space:nowrap;">Lihat</button>'
+    +'<button onclick="dismissNewUserToast()" style="background:none;border:none;color:#606080;cursor:pointer;font-size:20px;line-height:1;padding:0 4px;">&times;</button>'
+    +'</div>';
+  el.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1.5px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;width:310px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;animation:toastIn .35s ease;';
   document.body.appendChild(el);
   setTimeout(function(){if(el.parentNode){el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.remove();},400);}},9000);
 }
-
-function startUserPolling() { _lastUserCount = allUsers.length; setInterval(pollNewUsers, 30000); }
+function startUserPolling(){_lastUserCount=allUsers.length;setInterval(pollNewUsers,30000);}
 </script>
 </body>
 </html>
